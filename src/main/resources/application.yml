@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: realtime-gateway
+  datasource:
+    # The gateway owns no domain schema; it uses the `realtime` schema only for
+    # the commons authz replica + processed-events + outbox fragments, and the
+    # shared `bus` schema (auto-created) for the poller watermark.
+    url: ${REALTIME_DB_URL:jdbc:postgresql://localhost:5432/realtime?currentSchema=realtime&stringtype=unspecified}
+    username: ${REALTIME_DB_USER:realtime}
+    password: ${REALTIME_DB_PASSWORD:realtime}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: realtime
+        jdbc:
+          time_zone: UTC
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.xml
+    default-schema: realtime
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OAUTH_ISSUER_URI:}
+
+server:
+  port: ${PORT:8095}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+restopanda:
+  security:
+    audience: ${OAUTH_AUDIENCE:realtime-gateway}
+  messaging:
+    # Pure consumer: subscribe to the shared bus, never publish. The bus adapter
+    # (`pg`) is switched on centrally in the local stack via env; disable the
+    # outbox relay since the gateway originates no events.
+    relay-enabled: false
+  realtime:
+    # Ticket handshake: how long a minted stream ticket is redeemable, and the
+    # SSE keepalive comment cadence + emitter lifetime.
+    ticket-ttl: PT30S
+    heartbeat-interval: PT15S
+    stream-timeout: PT30M
+    # Shared HMAC signing key for guest device-session tokens (must match the key
+    # `service` mints with — the gateway only verifies) so a guest can stream its
+    # own session. Blank falls back to a deterministic dev key (never for prod),
+    # mirroring messaging-service.
+    guest-signing-key: ${GUEST_SIGNING_KEY:}

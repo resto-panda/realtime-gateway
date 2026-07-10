@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Master changelog for the `realtime` schema.
+      Forward-only changesets. Never edit an applied changeset — add a new one.
+
+      The realtime-gateway owns NO domain tables: it is a stateless bus→SSE
+      bridge. This schema exists only to host the shared commons fragments the
+      gateway depends on:
+        - commons-authz         : the event-fed authz replica used to check
+                                  channel entitlements at ticket-mint time.
+        - commons-processed-events : dedupe ledger for the authz replica updater.
+        - commons-outbox        : required by commons-persistence's JPA model
+                                  (the relay is disabled; nothing is published).
+      The `bus` schema (bus.events / bus.consumer_offsets) is created at runtime
+      by commons-messaging's PgBusSupport, not here.
+    -->
+
+    <changeSet id="realtime-0000-create-schema" author="realtime">
+        <sql>CREATE SCHEMA IF NOT EXISTS realtime;</sql>
+    </changeSet>
+
+    <include file="db/changelog/commons-outbox.xml"/>
+    <include file="db/changelog/commons-processed-events.xml"/>
+    <include file="db/changelog/commons-authz.xml"/>
+
+    <!-- realtime-gateway owns no schema changesets of its own. -->
+    <includeAll path="db/changelog/realtime/" errorIfMissingOrEmpty="false"/>
+
+</databaseChangeLog>

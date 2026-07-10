@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.restopanda</groupId>
+        <artifactId>restopanda-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <artifactId>realtime-gateway</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>RestoPanda Realtime Gateway</name>
+    <description>Bus→SSE bridge. Subscribes to the platform event bus, maps domain events to per-tenant channels, and fans them out to browsers over Server-Sent Events. Stateless and best-effort: correctness always comes from REST; the stream carries refetch hints (and chat bodies). Owns no business schema.</description>
+    <url>https://github.com/resto-panda/realtime-gateway</url>
+
+    <scm>
+        <connection>scm:git:https://github.com/resto-panda/realtime-gateway.git</connection>
+        <developerConnection>scm:git:git@github.com:resto-panda/realtime-gateway.git</developerConnection>
+        <url>https://github.com/resto-panda/realtime-gateway</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.restopanda</groupId>
+                <artifactId>commons-bom</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-web</artifactId>
+        </dependency>
+        <!-- Needs JPA + a DataSource: the pg-bus poller keeps its watermark in
+             bus.consumer_offsets, and commons-security's authz replica (used for
+             channel entitlement checks) is a JPA-backed table. The gateway owns
+             no domain schema of its own. -->
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-persistence</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-messaging</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-observability</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.restopanda</groupId>
+            <artifactId>commons-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- web, jpa, postgres, liquibase, validation, log4j2, lombok,
+             test, testcontainers come from restopanda-parent. -->
+        <!-- Spring Boot 4 split auto-configuration per technology: liquibase-core
+             comes from the parent; this module is the integration that actually runs
+             the changelog (commons fragments only — no schema of our own). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-liquibase</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

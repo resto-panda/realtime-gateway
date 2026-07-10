@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: realtime-gateway
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: realtime
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.xml
+    default-schema: realtime
+  # No OAuth issuer in tests → commons-security's resource-server chain is
+  # inactive and the deny-by-default fallback chain applies. Tests exercise the
+  # bus path, not HTTP.
+
+server:
+  port: 0
+
+restopanda:
+  messaging:
+    # Turn on the shared Postgres bus and poll fast with no safety lag so the
+    # subscription IT sees a delivery within a beat.
+    bus: pg
+    bus-poll-interval: PT0.2S
+    bus-safety-lag: PT0S
+    relay-enabled: false
