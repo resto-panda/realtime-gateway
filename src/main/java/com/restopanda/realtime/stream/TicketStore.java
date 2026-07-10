@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class TicketStore {
     private final RealtimeProperties properties;
     private final Clock clock;
 
+    @Autowired
     public TicketStore(RealtimeProperties properties) {
         this(properties, Clock.systemUTC());
     }

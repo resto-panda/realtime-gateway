@@ -60,6 +60,21 @@ public class EventMapper {
                 }
             }
 
+            // ---- Fine-grained KDS realtime nudges: a station queue changed (any
+            //      ticket mutation, incl. recall/override) or a runner board changed.
+            case EventTypes.KDS_STATION_UPDATED -> {
+                String stationId = str(data, "station_id");
+                if (stationId != null) {
+                    pushes.add(hint(Channel.kdsStation(tenant, stationId), e, ids(data, "ticket_id", "station_id")));
+                }
+            }
+            case EventTypes.KDS_RUNNER_UPDATED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(Channel.kdsRunner(tenant, loc), e, ids(data, "ticket_id", "station_id")));
+                }
+            }
+
             // ---- A fired course changes the whole board for that location. There
             //      is no station_id on this event (KDS derives station routing), so
             //      it lands on the location's runner board as a refetch hint.

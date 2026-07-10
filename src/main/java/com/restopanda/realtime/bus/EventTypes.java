@@ -19,6 +19,12 @@ public final class EventTypes {
     public static final String TICKET_BUMPED = "ticket.bumped";
     public static final String TICKET_DELAY_NOTED = "ticket.delay_noted";
 
+    // --- kds-service: fine-grained realtime nudges the gateway bridges straight to
+    //     a station / runner channel (covers recall/override, which emit no coarser
+    //     domain event). data carries station_id (station) / location_id (runner) --
+    public static final String KDS_STATION_UPDATED = "kds.station.updated";
+    public static final String KDS_RUNNER_UPDATED = "kds.runner.updated";
+
     // --- order-service: a course was fired to the kitchen -----------------------
     public static final String ORDER_COURSE_FIRED = "order.course_fired";
 
