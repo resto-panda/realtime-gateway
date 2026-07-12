@@ -84,6 +84,21 @@ public class EventMapper {
                 }
             }
 
+            // ---- Order lifecycle staff order screens must reflect live (an ops
+            //      Support void/refire, another device's edit). No dedicated
+            //      order channel exists, so they land on the location's floor
+            //      channel as refetch hints — staff order screens subscribe to
+            //      floor (they already hold floor:read) and re-pull the order.
+            case EventTypes.ORDER_VOIDED,
+                    EventTypes.ORDER_ITEM_VOIDED,
+                    EventTypes.ORDER_ITEM_REFIRED,
+                    EventTypes.ORDER_ITEM_RECALLED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id")));
+                }
+            }
+
             // ---- Table status is owned/emitted by platform; location_id lives in
             //      the payload (this event may carry no envelope location).
             case EventTypes.TABLE_STATUS_CHANGED -> {

@@ -28,6 +28,15 @@ public final class EventTypes {
     // --- order-service: a course was fired to the kitchen -----------------------
     public static final String ORDER_COURSE_FIRED = "order.course_fired";
 
+    /** Order lifecycle changes staff order screens must reflect live (hints only). */
+    public static final String ORDER_VOIDED = "order.voided";
+
+    public static final String ORDER_ITEM_VOIDED = "order.item_voided";
+
+    public static final String ORDER_ITEM_REFIRED = "order.item_refired";
+
+    public static final String ORDER_ITEM_RECALLED = "order.item_recalled";
+
     // --- platform: table status transitions (data carries location_id, table_id,
     //     status) -----------------------------------------------------------------
     public static final String TABLE_STATUS_CHANGED = "table.status_changed";
