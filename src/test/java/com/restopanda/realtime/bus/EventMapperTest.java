@@ -86,8 +86,13 @@ class EventMapperTest {
 
     @Test
     void orderLifecycleEventsHitTheFloorChannel() {
-        for (String type :
-                new String[] {"order.voided", "order.item_voided", "order.item_refired", "order.item_recalled"}) {
+        for (String type : new String[] {
+            "order.voided",
+            "order.item_voided",
+            "order.item_refired",
+            "order.item_recalled",
+            "order.force_resolved"
+        }) {
             var pushes = mapper.map(event(type, "ten_x", "loc_1", Map.of("order_id", "ord_1", "line_item_id", "li_1")));
             assertThat(pushes).hasSize(1);
             assertThat(pushes.get(0).channel().value()).isEqualTo("ten_x:floor.loc_1");

@@ -92,7 +92,8 @@ public class EventMapper {
             case EventTypes.ORDER_VOIDED,
                     EventTypes.ORDER_ITEM_VOIDED,
                     EventTypes.ORDER_ITEM_REFIRED,
-                    EventTypes.ORDER_ITEM_RECALLED -> {
+                    EventTypes.ORDER_ITEM_RECALLED,
+                    EventTypes.ORDER_FORCE_RESOLVED -> {
                 String loc = location != null ? location : str(data, "location_id");
                 if (loc != null) {
                     pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id")));

@@ -62,6 +62,7 @@ change. Everything is a refetch **hint** except chat, which carries the body.
 | `ticket.item_started/ready/bumped`      | `{t}:kds.station.{station_id}`, `{t}:kds.runner.{loc}` | hint    |
 | `ticket.delay_noted`                    | `{t}:kds.station.{station_id}`, `{t}:kds.runner.{loc}` | hint    |
 | `order.course_fired`                    | `{t}:kds.runner.{loc}`                                 | hint    |
+| `order.voided` / `order.item_voided` / `order.item_refired` / `order.item_recalled` / `order.force_resolved` | `{t}:floor.{loc}` | hint |
 | `table.status_changed`                  | `{t}:floor.{location_id}`                              | hint    |
 | `session.opened/check_requested/closed` | `{t}:floor.{loc}`, `{t}:session.{session_id}`          | hint    |
 | `message.sent` / `thread.message`       | `{t}:thread.{thread_id}`                               | **body**|

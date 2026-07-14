@@ -37,6 +37,9 @@ public final class EventTypes {
 
     public static final String ORDER_ITEM_RECALLED = "order.item_recalled";
 
+    /** A manager/admin force-resolved a stuck/orphaned order — floor + order screens refetch. */
+    public static final String ORDER_FORCE_RESOLVED = "order.force_resolved";
+
     // --- platform: table status transitions (data carries location_id, table_id,
     //     status) -----------------------------------------------------------------
     public static final String TABLE_STATUS_CHANGED = "table.status_changed";
