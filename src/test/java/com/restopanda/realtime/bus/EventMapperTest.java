@@ -52,6 +52,33 @@ class EventMapperTest {
     }
 
     @Test
+    void ticketItemReadyCarriesTableAndItemForTheAlert() {
+        var pushes = mapper.map(event(
+                "ticket.item_ready",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "ticket_id", "tkt_1",
+                        "station_id", "stn_1",
+                        "order_id", "ord_1",
+                        "table_label", "12",
+                        "item_name", "Ribeye",
+                        "qty", 2)));
+
+        // Both the station and its runner board get the alert, and — unlike other
+        // ticket hints — it carries the table + item so the screen can render
+        // "Table 12 · Ribeye ready" and sound a cue without a refetch.
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactlyInAnyOrder("ten_x:kds.station.stn_1", "ten_x:kds.runner.loc_1");
+        assertThat(pushes).allSatisfy(p -> assertThat(p.payload())
+                .containsEntry("type", "ticket.item_ready")
+                .containsEntry("table_label", "12")
+                .containsEntry("item_name", "Ribeye")
+                .containsEntry("qty", 2));
+    }
+
+    @Test
     void courseFiredHitsRunnerBoard() {
         var pushes =
                 mapper.map(event("order.course_fired", "ten_x", "loc_1", Map.of("order_id", "ord_1", "course_no", 2)));

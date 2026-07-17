@@ -43,10 +43,7 @@ public class EventMapper {
 
         switch (e.type()) {
             // ---- KDS ticket lifecycle → the affected station + its runner board.
-            case EventTypes.TICKET_ITEM_STARTED,
-                    EventTypes.TICKET_ITEM_READY,
-                    EventTypes.TICKET_BUMPED,
-                    EventTypes.TICKET_DELAY_NOTED -> {
+            case EventTypes.TICKET_ITEM_STARTED, EventTypes.TICKET_BUMPED, EventTypes.TICKET_DELAY_NOTED -> {
                 String stationId = str(data, "station_id");
                 if (stationId != null) {
                     pushes.add(hint(
@@ -57,6 +54,23 @@ public class EventMapper {
                 if (location != null) {
                     pushes.add(hint(
                             Channel.kdsRunner(tenant, location), e, ids(data, "ticket_id", "station_id", "order_id")));
+                }
+            }
+
+            // ---- "Food up" alert: unlike the other ticket hints, carry the table
+            //      label + item name so the station/runner screen can render a
+            //      labeled, audible cue ("Table 12 · Ribeye ready") directly. Still a
+            //      hint (the board also re-pulls for full state); the extra fields
+            //      just let the client alert immediately without waiting on the fetch.
+            case EventTypes.TICKET_ITEM_READY -> {
+                Map<String, Object> ready =
+                        ids(data, "ticket_id", "station_id", "order_id", "table_label", "item_name", "qty");
+                String stationId = str(data, "station_id");
+                if (stationId != null) {
+                    pushes.add(hint(Channel.kdsStation(tenant, stationId), e, ready));
+                }
+                if (location != null) {
+                    pushes.add(hint(Channel.kdsRunner(tenant, location), e, ready));
                 }
             }
 
