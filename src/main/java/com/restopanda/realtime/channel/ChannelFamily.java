@@ -17,6 +17,12 @@ public enum ChannelFamily {
     FLOOR("floor"),
     /** A single dining/online session: {@code session.{sessionId}}. */
     SESSION("session"),
+    /**
+     * A single staff user's personal alert inbox: {@code user.{userId}}. A staff
+     * caller may only ever subscribe to their <em>own</em> user channel (self-only),
+     * so it is the one addressable-to-a-person surface (e.g. "table 12 is now yours").
+     */
+    USER("user"),
     /** A single chat thread (carries message bodies): {@code thread.{threadId}}. */
     THREAD("thread");
 

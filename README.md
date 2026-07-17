@@ -44,6 +44,7 @@ out of scope the whole mint is rejected.
 | `{t}:kds.runner.{loc}`    | `kds:read` + `loc` ∈ token `location_ids`    | ✗                              |
 | `{t}:floor.{loc}`         | `floor:read` + `loc` ∈ token `location_ids`  | ✗                              |
 | `{t}:session.{id}`        | `floor:read`                                 | only its **own** `session.{id}`|
+| `{t}:user.{userId}`       | **self-only** (`userId` == token `sub`; no entitlement) | ✗                   |
 | `{t}:thread.{id}`         | `messaging:read`                             | ✗                              |
 
 Cross-tenant, cross-location, missing-entitlement, and guest-out-of-session
@@ -64,6 +65,7 @@ change. Everything is a refetch **hint** except chat, which carries the body.
 | `order.course_fired`                    | `{t}:kds.runner.{loc}`                                 | hint    |
 | `order.voided` / `order.item_voided` / `order.item_refired` / `order.item_recalled` / `order.force_resolved` | `{t}:floor.{loc}` | hint |
 | `table.status_changed`                  | `{t}:floor.{location_id}`                              | hint    |
+| `order.server_reassigned`               | `{t}:user.{new_server_id}`, `{t}:user.{old_server_id}` | hint (carries `table_label`) |
 | `session.opened/check_requested/closed` | `{t}:floor.{loc}`, `{t}:session.{session_id}`          | hint    |
 | `message.sent` / `thread.message`       | `{t}:thread.{thread_id}`                               | **body**|
 

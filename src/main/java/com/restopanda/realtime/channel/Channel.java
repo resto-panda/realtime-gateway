@@ -48,6 +48,11 @@ public record Channel(String tenantId, ChannelFamily family, String entityId) {
         return new Channel(tenantId, ChannelFamily.SESSION, sessionId);
     }
 
+    /** A staff user's personal alert inbox — only that user may subscribe to it. */
+    public static Channel user(String tenantId, String userId) {
+        return new Channel(tenantId, ChannelFamily.USER, userId);
+    }
+
     public static Channel thread(String tenantId, String threadId) {
         return new Channel(tenantId, ChannelFamily.THREAD, threadId);
     }

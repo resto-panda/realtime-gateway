@@ -129,6 +129,42 @@ class EventMapperTest {
     }
 
     @Test
+    void serverReassignedAlertsNewAndPreviousServerOnTheirOwnChannels() {
+        var pushes = mapper.map(event(
+                "order.server_reassigned",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "table_label", "12",
+                        "session_id", "ses_1",
+                        "new_server_id", "usr_new",
+                        "old_server_id", "usr_old")));
+
+        // The new server (and the previous one, whose list changed) get it on their
+        // own personal channels, carrying the table so the client can say whose it is.
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactlyInAnyOrder("ten_x:user.usr_new", "ten_x:user.usr_old");
+        assertThat(pushes).allSatisfy(p -> assertThat(p.payload())
+                .containsEntry("table_label", "12")
+                .containsEntry("new_server_id", "usr_new"));
+    }
+
+    @Test
+    void serverReassignedWithNoPriorServerAlertsOnlyTheNewServer() {
+        var pushes = mapper.map(event(
+                "order.server_reassigned",
+                "ten_x",
+                "loc_1",
+                Map.of("order_id", "ord_1", "table_label", "5", "new_server_id", "usr_new")));
+
+        assertThat(pushes)
+                .singleElement()
+                .satisfies(p -> assertThat(p.channel().value()).isEqualTo("ten_x:user.usr_new"));
+    }
+
+    @Test
     void threadMessageCarriesBodyNotHint() {
         var pushes = mapper.map(event(
                 "message.sent",

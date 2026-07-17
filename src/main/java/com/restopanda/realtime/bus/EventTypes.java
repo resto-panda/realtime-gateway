@@ -40,6 +40,13 @@ public final class EventTypes {
     /** A manager/admin force-resolved a stuck/orphaned order — floor + order screens refetch. */
     public static final String ORDER_FORCE_RESOLVED = "order.force_resolved";
 
+    /**
+     * A table/check was (re)assigned to a server — alert the new server on their
+     * own {@code user.{userId}} channel ("table 12 is now yours"). data carries
+     * {@code order_id, table_label, session_id, new_server_id, old_server_id}.
+     */
+    public static final String ORDER_SERVER_REASSIGNED = "order.server_reassigned";
+
     // --- platform: table status transitions (data carries location_id, table_id,
     //     status) -----------------------------------------------------------------
     public static final String TABLE_STATUS_CHANGED = "table.status_changed";

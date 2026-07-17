@@ -41,7 +41,7 @@ class StreamControllerTest {
     @BeforeEach
     void setUp() {
         CallerResolver resolver = mock(CallerResolver.class);
-        Caller staff = Caller.staff("ten_A", List.of("loc_1"), Set.of("kds:read")::contains);
+        Caller staff = Caller.staff("ten_A", "usr_1", List.of("loc_1"), Set.of("kds:read")::contains);
         when(resolver.resolve(any())).thenReturn(staff);
 
         StreamController controller = new StreamController(

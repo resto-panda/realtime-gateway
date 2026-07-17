@@ -38,7 +38,7 @@ public class CallerResolver {
     public Caller resolve(HttpServletRequest request) {
         TenantContext ctx = TenantContext.current().orElse(null);
         if (ctx != null && ctx.tenantId() != null && ctx.userId() != null) {
-            return Caller.staff(ctx.tenantId(), ctx.locationIds(), entitlements::has);
+            return Caller.staff(ctx.tenantId(), ctx.userId(), ctx.locationIds(), entitlements::has);
         }
 
         Object attr = request.getAttribute(GuestSessionAuthFilter.GUEST_SESSION_ATTRIBUTE);

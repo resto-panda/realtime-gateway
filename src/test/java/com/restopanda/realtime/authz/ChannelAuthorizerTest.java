@@ -21,10 +21,13 @@ class ChannelAuthorizerTest {
 
     private final ChannelAuthorizer authorizer = new ChannelAuthorizer();
 
-    /** A staff caller in tenant/locations, holding the given entitlements. */
+    /** The user id of the {@link #staff} caller — its own personal channel. */
+    private static final String SELF = "usr_self";
+
+    /** A staff caller in tenant/locations (user id {@link #SELF}), holding the given entitlements. */
     private static Caller staff(String tenant, Set<String> locations, String... entitlements) {
         Set<String> held = Set.of(entitlements);
-        return Caller.staff(tenant, List.copyOf(locations), held::contains);
+        return Caller.staff(tenant, SELF, List.copyOf(locations), held::contains);
     }
 
     // ---- staff: happy paths ----------------------------------------------------
@@ -79,6 +82,31 @@ class ChannelAuthorizerTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    // ---- staff: personal user channel is self-only ----------------------------
+
+    @Test
+    void staffGetsOwnUserChannelWithNoEntitlement() {
+        Caller caller = staff("ten_A", Set.of()); // holds nothing — a user always gets their own inbox
+        assertThat(authorizer.authorize(caller, List.of("ten_A:user." + SELF)))
+                .singleElement()
+                .extracting(Channel::value)
+                .isEqualTo("ten_A:user." + SELF);
+    }
+
+    @Test
+    void staffCannotSubscribeToAnotherUsersChannel() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "floor:read", "kds:read");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:user.usr_other")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void userChannelCrossTenantIsRejectedEvenForSameUserId() {
+        Caller caller = staff("ten_A", Set.of());
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_B:user." + SELF)))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
     @Test
     void wholeRequestRejectedIfAnySingleChannelIsOutOfScope() {
         Caller caller = staff("ten_A", Set.of("loc_1"), "kds:read");
@@ -111,7 +139,8 @@ class ChannelAuthorizerTest {
     @Test
     void guestCannotReachFloorKdsOrThread() {
         Caller g = guest("ten_A", "ses_1");
-        for (String c : List.of("ten_A:floor.loc_1", "ten_A:kds.station.stn_1", "ten_A:thread.thr_1")) {
+        for (String c :
+                List.of("ten_A:floor.loc_1", "ten_A:kds.station.stn_1", "ten_A:thread.thr_1", "ten_A:user.usr_1")) {
             assertThatThrownBy(() -> authorizer.authorize(g, List.of(c)))
                     .as("guest must not reach %s", c)
                     .isInstanceOf(ForbiddenException.class);

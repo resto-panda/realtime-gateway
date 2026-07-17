@@ -32,10 +32,12 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
      * {@code location_ids}.
      *
      * @param tenantId       the caller's verified tenant
+     * @param userId         the caller's own verified user id (token {@code sub})
      * @param locationIds    the caller's in-scope locations (from the token)
      * @param hasEntitlement resolves an entitlement against the authz replica
      */
-    record Staff(String tenantId, Set<String> locationIds, Predicate<String> hasEntitlement) implements Caller {
+    record Staff(String tenantId, String userId, Set<String> locationIds, Predicate<String> hasEntitlement)
+            implements Caller {
 
         public Staff {
             locationIds = locationIds == null ? Set.of() : Set.copyOf(locationIds);
@@ -57,6 +59,9 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
                 case FLOOR -> hasEntitlement.test("floor:read") && locationIds.contains(channel.entityId());
                 // A single session is a floor/service surface, tenant-scoped.
                 case SESSION -> hasEntitlement.test("floor:read");
+                // A personal user inbox: SELF-ONLY. No entitlement — a user may
+                // always receive their own alerts, and never anyone else's.
+                case USER -> userId != null && userId.equals(channel.entityId());
                 // A chat thread carries message bodies: needs messaging read.
                 case THREAD -> hasEntitlement.test("messaging:read");
             };
@@ -89,7 +94,9 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
     }
 
     /** Convenience for callers building a {@link Staff} from list location ids. */
-    static Staff staff(String tenantId, List<String> locationIds, Predicate<String> hasEntitlement) {
-        return new Staff(tenantId, locationIds == null ? Set.of() : Set.copyOf(locationIds), hasEntitlement);
+    static Staff staff(
+            String tenantId, String userId, List<String> locationIds, Predicate<String> hasEntitlement) {
+        return new Staff(
+                tenantId, userId, locationIds == null ? Set.of() : Set.copyOf(locationIds), hasEntitlement);
     }
 }

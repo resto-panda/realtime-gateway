@@ -114,6 +114,23 @@ public class EventMapper {
                 }
             }
 
+            // ---- A table/check was (re)assigned to a server → alert the NEW server
+            //      on their personal channel ("table 12 is now yours"), carrying the
+            //      table + ids so the client renders the cue and refetches its floor.
+            //      Also nudge the PREVIOUS server so the table leaves their list.
+            case EventTypes.ORDER_SERVER_REASSIGNED -> {
+                Map<String, Object> fields =
+                        ids(data, "order_id", "table_label", "session_id", "new_server_id", "old_server_id");
+                String newServer = str(data, "new_server_id");
+                if (newServer != null) {
+                    pushes.add(hint(Channel.user(tenant, newServer), e, fields));
+                }
+                String oldServer = str(data, "old_server_id");
+                if (oldServer != null && !oldServer.equals(newServer)) {
+                    pushes.add(hint(Channel.user(tenant, oldServer), e, fields));
+                }
+            }
+
             // ---- Table status is owned/emitted by platform; location_id lives in
             //      the payload (this event may carry no envelope location).
             case EventTypes.TABLE_STATUS_CHANGED -> {
