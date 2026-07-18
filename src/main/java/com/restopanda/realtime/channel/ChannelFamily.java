@@ -1,7 +1,7 @@
 package com.restopanda.realtime.channel;
 
 /**
- * The five channel families the gateway fans out (Realtime design §C). A channel
+ * The channel families the gateway fans out (Realtime design §C). A channel
  * is scoped to a tenant and one of these families plus an entity id, e.g.
  * {@code kds.station.stn_1}. The family determines the authorization rule a
  * subscriber must satisfy (staff entitlement + location membership, or guest
@@ -24,7 +24,9 @@ public enum ChannelFamily {
      */
     USER("user"),
     /** A single chat thread (carries message bodies): {@code thread.{threadId}}. */
-    THREAD("thread");
+    THREAD("thread"),
+    /** A location's cash-register/drawer board: {@code register.{locationId}}. */
+    REGISTER("register");
 
     private final String prefix;
 

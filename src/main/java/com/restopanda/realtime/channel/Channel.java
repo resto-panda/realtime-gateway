@@ -57,6 +57,11 @@ public record Channel(String tenantId, ChannelFamily family, String entityId) {
         return new Channel(tenantId, ChannelFamily.THREAD, threadId);
     }
 
+    /** A location's cash-register/drawer board — payment-entitled staff only. */
+    public static Channel register(String tenantId, String locationId) {
+        return new Channel(tenantId, ChannelFamily.REGISTER, locationId);
+    }
+
     /**
      * Parses a wire channel string back into its parts, validating the shape.
      *

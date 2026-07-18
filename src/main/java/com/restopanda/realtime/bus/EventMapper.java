@@ -155,6 +155,23 @@ public class EventMapper {
                 }
             }
 
+            // ---- Register/drawer state changed → the location's register board.
+            //      location_id is read from the payload first (the producer always
+            //      carries it in data), envelope fallback. A hint, but it carries
+            //      the drawer state so the screen can update its tiles immediately.
+            case EventTypes.REGISTER_UPDATED -> {
+                String loc = str(data, "location_id");
+                if (loc == null) {
+                    loc = location;
+                }
+                if (loc != null) {
+                    pushes.add(hint(
+                            Channel.register(tenant, loc),
+                            e,
+                            ids(data, "drawer_id", "session_id", "kind", "drawer_status", "expected_in_drawer")));
+                }
+            }
+
             // ---- Chat: the only family that carries a body, so the client
             //      renders directly without a refetch.
             case EventTypes.MESSAGE_SENT, EventTypes.THREAD_MESSAGE -> {

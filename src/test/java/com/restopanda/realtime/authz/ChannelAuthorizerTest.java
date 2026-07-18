@@ -52,6 +52,22 @@ class ChannelAuthorizerTest {
         assertThat(authorizer.authorize(caller, List.of("ten_A:thread.thr_1"))).hasSize(1);
     }
 
+    @Test
+    void staffPaymentReadGetsInScopeRegister() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "payment:read");
+        assertThat(authorizer.authorize(caller, List.of("ten_A:register.loc_1")))
+                .singleElement()
+                .extracting(Channel::value)
+                .isEqualTo("ten_A:register.loc_1");
+    }
+
+    @Test
+    void staffPaymentDrawerAloneAlsoGetsInScopeRegister() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "payment:drawer");
+        assertThat(authorizer.authorize(caller, List.of("ten_A:register.loc_1")))
+                .hasSize(1);
+    }
+
     // ---- staff: the rejections -------------------------------------------------
 
     @Test
@@ -79,6 +95,28 @@ class ChannelAuthorizerTest {
     void missingEntitlementIsRejected() {
         Caller caller = staff("ten_A", Set.of("loc_1")); // holds nothing
         assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:kds.station.stn_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void registerWithoutPaymentEntitlementIsRejected() {
+        // floor:read/kds:read do NOT open the register board — payment:* gates it.
+        Caller caller = staff("ten_A", Set.of("loc_1"), "floor:read", "kds:read");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:register.loc_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossLocationRegisterIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "payment:read", "payment:drawer");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:register.loc_2")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossTenantRegisterIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "payment:read");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_B:register.loc_1")))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -139,8 +177,12 @@ class ChannelAuthorizerTest {
     @Test
     void guestCannotReachFloorKdsOrThread() {
         Caller g = guest("ten_A", "ses_1");
-        for (String c :
-                List.of("ten_A:floor.loc_1", "ten_A:kds.station.stn_1", "ten_A:thread.thr_1", "ten_A:user.usr_1")) {
+        for (String c : List.of(
+                "ten_A:floor.loc_1",
+                "ten_A:kds.station.stn_1",
+                "ten_A:thread.thr_1",
+                "ten_A:user.usr_1",
+                "ten_A:register.loc_1")) {
             assertThatThrownBy(() -> authorizer.authorize(g, List.of(c)))
                     .as("guest must not reach %s", c)
                     .isInstanceOf(ForbiddenException.class);

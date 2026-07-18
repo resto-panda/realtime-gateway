@@ -178,6 +178,57 @@ class EventMapperTest {
     }
 
     @Test
+    void registerUpdatedHitsTheLocationRegisterChannel() {
+        var pushes = mapper.map(event(
+                "register.updated",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "location_id", "loc_1",
+                        "drawer_id", "drw_1",
+                        "session_id", "dse_1",
+                        "kind", "cash_event",
+                        "drawer_status", "open",
+                        "expected_in_drawer", 12500L)));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:register.loc_1");
+            assertThat(p.channel().family()).isEqualTo(ChannelFamily.REGISTER);
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("type", "register.updated")
+                    .containsEntry("drawer_id", "drw_1")
+                    .containsEntry("kind", "cash_event")
+                    .containsEntry("drawer_status", "open")
+                    .containsEntry("expected_in_drawer", 12500L);
+        });
+    }
+
+    @Test
+    void registerUpdatedReadsPayloadLocationFirstThenEnvelopeFallback() {
+        // data location_id wins over the envelope's...
+        var payloadWins = mapper.map(event(
+                "register.updated",
+                "ten_x",
+                "loc_env",
+                Map.of("location_id", "loc_data", "drawer_id", "drw_1", "kind", "session_opened")));
+        assertThat(payloadWins).singleElement().satisfies(p -> assertThat(p.channel().value())
+                .isEqualTo("ten_x:register.loc_data"));
+
+        // ...and the envelope location is the fallback when data has none.
+        var envelopeFallback = mapper.map(
+                event("register.updated", "ten_x", "loc_env", Map.of("drawer_id", "drw_1", "kind", "session_closed")));
+        assertThat(envelopeFallback).singleElement().satisfies(p -> assertThat(p.channel().value())
+                .isEqualTo("ten_x:register.loc_env"));
+    }
+
+    @Test
+    void registerUpdatedWithNoLocationAnywhereResolvesNoChannels() {
+        assertThat(mapper.map(event("register.updated", "ten_x", null, Map.of("drawer_id", "drw_1"))))
+                .isEmpty();
+    }
+
+    @Test
     void threadMessageCarriesBodyNotHint() {
         var pushes = mapper.map(event(
                 "message.sent",

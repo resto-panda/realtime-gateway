@@ -64,6 +64,10 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
                 case USER -> userId != null && userId.equals(channel.entityId());
                 // A chat thread carries message bodies: needs messaging read.
                 case THREAD -> hasEntitlement.test("messaging:read");
+                // The register/drawer board is keyed by location: payment read OR
+                // drawer operation, AND that the location is in the caller's scope.
+                case REGISTER -> (hasEntitlement.test("payment:read") || hasEntitlement.test("payment:drawer"))
+                        && locationIds.contains(channel.entityId());
             };
         }
     }

@@ -58,6 +58,11 @@ public final class EventTypes {
     /** Pre-order release (un-seat) — the floor must refresh just like a close. */
     public static final String SESSION_RELEASED = "session.released";
 
+    // --- payment-service: drawer/register state changed (session opened/closed,
+    //     cash event, cash sale). data carries location_id, drawer_id, session_id?,
+    //     kind, drawer_status, expected_in_drawer -------------------------------
+    public static final String REGISTER_UPDATED = "register.updated";
+
     // --- messaging-service: chat. `thread.message` is the ready-made relay
     //     payload (carries `channel` + `body`); `message.sent` is the domain
     //     event (also carries `body`) --------------------------------------------
