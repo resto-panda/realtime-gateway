@@ -129,6 +129,7 @@ class EventMapperTest {
         for (String type : new String[] {
             "order.voided",
             "order.item_voided",
+            "order.item_comped",
             "order.item_refired",
             "order.item_recalled",
             "order.force_resolved"
@@ -139,6 +140,86 @@ class EventMapperTest {
             assertThat(pushes.get(0).hint()).isTrue();
             assertThat(pushes.get(0).payload()).containsEntry("order_id", "ord_1");
         }
+    }
+
+    @Test
+    void approvalRequestedHitsTheLocationApprovalsChannel() {
+        var pushes = mapper.map(event(
+                "order.approval_requested",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "approval_id", "apr_1",
+                        "order_id", "ord_1",
+                        "kind", "item_void",
+                        "line_item_id", "li_1",
+                        "item_name", "Ribeye",
+                        "amount_minor", 4200L,
+                        "reason", "guest changed mind",
+                        "kitchen_started", true,
+                        "table_label", "12",
+                        "requested_by", "usr_server")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:approvals.loc_1");
+            assertThat(p.channel().family()).isEqualTo(ChannelFamily.APPROVALS);
+            assertThat(p.hint()).isTrue();
+            // The request fields pass through so the queue/badge renders without
+            // waiting on the refetch.
+            assertThat(p.payload())
+                    .containsEntry("type", "order.approval_requested")
+                    .containsEntry("approval_id", "apr_1")
+                    .containsEntry("order_id", "ord_1")
+                    .containsEntry("kind", "item_void")
+                    .containsEntry("amount_minor", 4200L)
+                    .containsEntry("reason", "guest changed mind")
+                    .containsEntry("kitchen_started", true)
+                    .containsEntry("table_label", "12")
+                    .containsEntry("requested_by", "usr_server");
+        });
+    }
+
+    @Test
+    void approvalResolvedHitsTheLocationApprovalsChannel() {
+        var pushes = mapper.map(event(
+                "order.approval_resolved",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "approval_id", "apr_1",
+                        "order_id", "ord_1",
+                        "status", "approved",
+                        "resolved_by", "usr_manager",
+                        "note", "ok")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:approvals.loc_1");
+            assertThat(p.payload())
+                    .containsEntry("status", "approved")
+                    .containsEntry("resolved_by", "usr_manager")
+                    .containsEntry("note", "ok");
+        });
+    }
+
+    @Test
+    void approvalEventUsesPayloadLocationWhenEnvelopeHasNone() {
+        var pushes = mapper.map(event(
+                "order.approval_requested",
+                "ten_x",
+                null,
+                Map.of("approval_id", "apr_1", "order_id", "ord_1", "location_id", "loc_9")));
+        assertThat(pushes).singleElement().satisfies(p -> assertThat(p.channel().value())
+                .isEqualTo("ten_x:approvals.loc_9"));
+    }
+
+    @Test
+    void approvalEventWithNoLocationAnywhereResolvesNoChannels() {
+        assertThat(mapper.map(event(
+                        "order.approval_resolved",
+                        "ten_x",
+                        null,
+                        Map.of("approval_id", "apr_1", "order_id", "ord_1", "status", "rejected"))))
+                .isEmpty();
     }
 
     @Test

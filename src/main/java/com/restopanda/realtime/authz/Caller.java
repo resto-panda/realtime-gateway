@@ -68,6 +68,10 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
                 // drawer operation, AND that the location is in the caller's scope.
                 case REGISTER -> (hasEntitlement.test("payment:read") || hasEntitlement.test("payment:drawer"))
                         && locationIds.contains(channel.entityId());
+                // The manager approval queue is keyed by location: manager
+                // entitlement + location scope.
+                case APPROVALS -> hasEntitlement.test("order:manage")
+                        && locationIds.contains(channel.entityId());
             };
         }
     }

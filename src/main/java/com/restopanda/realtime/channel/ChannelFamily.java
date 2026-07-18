@@ -26,7 +26,9 @@ public enum ChannelFamily {
     /** A single chat thread (carries message bodies): {@code thread.{threadId}}. */
     THREAD("thread"),
     /** A location's cash-register/drawer board: {@code register.{locationId}}. */
-    REGISTER("register");
+    REGISTER("register"),
+    /** A location's manager approval queue: {@code approvals.{locationId}}. */
+    APPROVALS("approvals");
 
     private final String prefix;
 

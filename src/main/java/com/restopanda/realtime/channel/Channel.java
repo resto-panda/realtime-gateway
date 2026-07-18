@@ -62,6 +62,11 @@ public record Channel(String tenantId, ChannelFamily family, String entityId) {
         return new Channel(tenantId, ChannelFamily.REGISTER, locationId);
     }
 
+    /** A location's manager approval queue — {@code order:manage} staff only. */
+    public static Channel approvals(String tenantId, String locationId) {
+        return new Channel(tenantId, ChannelFamily.APPROVALS, locationId);
+    }
+
     /**
      * Parses a wire channel string back into its parts, validating the shape.
      *

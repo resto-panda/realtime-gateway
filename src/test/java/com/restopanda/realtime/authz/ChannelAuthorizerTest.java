@@ -68,6 +68,15 @@ class ChannelAuthorizerTest {
                 .hasSize(1);
     }
 
+    @Test
+    void staffOrderManageGetsInScopeApprovals() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "order:manage");
+        assertThat(authorizer.authorize(caller, List.of("ten_A:approvals.loc_1")))
+                .singleElement()
+                .extracting(Channel::value)
+                .isEqualTo("ten_A:approvals.loc_1");
+    }
+
     // ---- staff: the rejections -------------------------------------------------
 
     @Test
@@ -117,6 +126,29 @@ class ChannelAuthorizerTest {
     void crossTenantRegisterIsRejected() {
         Caller caller = staff("ten_A", Set.of("loc_1"), "payment:read");
         assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_B:register.loc_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void approvalsWithoutOrderManageIsRejected() {
+        // floor:read/kds:read (or even the money entitlements) do NOT open the
+        // approval queue — only order:manage gates it.
+        Caller caller = staff("ten_A", Set.of("loc_1"), "floor:read", "kds:read", "order:discount", "order:comp");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:approvals.loc_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossLocationApprovalsIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "order:manage");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:approvals.loc_2")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossTenantApprovalsIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "order:manage");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_B:approvals.loc_1")))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -182,7 +214,8 @@ class ChannelAuthorizerTest {
                 "ten_A:kds.station.stn_1",
                 "ten_A:thread.thr_1",
                 "ten_A:user.usr_1",
-                "ten_A:register.loc_1")) {
+                "ten_A:register.loc_1",
+                "ten_A:approvals.loc_1")) {
             assertThatThrownBy(() -> authorizer.authorize(g, List.of(c)))
                     .as("guest must not reach %s", c)
                     .isInstanceOf(ForbiddenException.class);

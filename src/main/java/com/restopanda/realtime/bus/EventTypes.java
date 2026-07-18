@@ -33,12 +33,21 @@ public final class EventTypes {
 
     public static final String ORDER_ITEM_VOIDED = "order.item_voided";
 
+    public static final String ORDER_ITEM_COMPED = "order.item_comped";
+
     public static final String ORDER_ITEM_REFIRED = "order.item_refired";
 
     public static final String ORDER_ITEM_RECALLED = "order.item_recalled";
 
     /** A manager/admin force-resolved a stuck/orphaned order — floor + order screens refetch. */
     public static final String ORDER_FORCE_RESOLVED = "order.force_resolved";
+
+    // --- order-service: money-off approval workflow (staff comp/discount/void
+    //     over threshold → manager approval queue). data carries approval_id,
+    //     order_id, kind, amount_minor, requested_by (+ status/resolved_by on
+    //     resolve); location_id may live in the payload -------------------------
+    public static final String ORDER_APPROVAL_REQUESTED = "order.approval_requested";
+    public static final String ORDER_APPROVAL_RESOLVED = "order.approval_resolved";
 
     /**
      * A table/check was (re)assigned to a server — alert the new server on their

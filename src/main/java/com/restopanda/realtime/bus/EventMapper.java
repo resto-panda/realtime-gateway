@@ -105,12 +105,43 @@ public class EventMapper {
             //      floor (they already hold floor:read) and re-pull the order.
             case EventTypes.ORDER_VOIDED,
                     EventTypes.ORDER_ITEM_VOIDED,
+                    EventTypes.ORDER_ITEM_COMPED,
                     EventTypes.ORDER_ITEM_REFIRED,
                     EventTypes.ORDER_ITEM_RECALLED,
                     EventTypes.ORDER_FORCE_RESOLVED -> {
                 String loc = location != null ? location : str(data, "location_id");
                 if (loc != null) {
                     pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id")));
+                }
+            }
+
+            // ---- Money-off approval workflow → the location's manager approval
+            //      queue (order:manage subscribers). Carries the request fields so
+            //      the queue/badge can update immediately; still a hint — the
+            //      approvals screen re-pulls for full state.
+            case EventTypes.ORDER_APPROVAL_REQUESTED, EventTypes.ORDER_APPROVAL_RESOLVED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(
+                            Channel.approvals(tenant, loc),
+                            e,
+                            ids(
+                                    data,
+                                    "approval_id",
+                                    "order_id",
+                                    "kind",
+                                    "line_item_id",
+                                    "item_name",
+                                    "qty",
+                                    "amount_minor",
+                                    "percent_bps",
+                                    "reason",
+                                    "kitchen_started",
+                                    "table_label",
+                                    "requested_by",
+                                    "status",
+                                    "resolved_by",
+                                    "note")));
                 }
             }
 
