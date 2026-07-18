@@ -55,6 +55,8 @@ public final class EventTypes {
     public static final String SESSION_OPENED = "session.opened";
     public static final String SESSION_CHECK_REQUESTED = "session.check_requested";
     public static final String SESSION_CLOSED = "session.closed";
+    /** Pre-order release (un-seat) — the floor must refresh just like a close. */
+    public static final String SESSION_RELEASED = "session.released";
 
     // --- messaging-service: chat. `thread.message` is the ready-made relay
     //     payload (carries `channel` + `body`); `message.sent` is the domain

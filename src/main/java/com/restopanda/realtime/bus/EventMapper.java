@@ -142,7 +142,10 @@ public class EventMapper {
 
             // ---- Session lifecycle → the floor map for the location and the
             //      session's own channel.
-            case EventTypes.SESSION_OPENED, EventTypes.SESSION_CHECK_REQUESTED, EventTypes.SESSION_CLOSED -> {
+            case EventTypes.SESSION_OPENED,
+                    EventTypes.SESSION_CHECK_REQUESTED,
+                    EventTypes.SESSION_CLOSED,
+                    EventTypes.SESSION_RELEASED -> {
                 String sessionId = str(data, "session_id");
                 if (location != null) {
                     pushes.add(hint(Channel.floor(tenant, location), e, ids(data, "session_id", "table_id")));

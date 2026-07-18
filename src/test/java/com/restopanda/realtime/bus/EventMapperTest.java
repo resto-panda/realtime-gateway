@@ -112,6 +112,19 @@ class EventMapperTest {
     }
 
     @Test
+    void sessionReleasedResolvesFloorAndSession() {
+        // Pre-order un-seat must refresh the floor exactly like a close.
+        var pushes = mapper.map(event(
+                "session.released",
+                "ten_x",
+                "loc_1",
+                Map.of("session_id", "ses_1", "table_id", "tbl_1", "reason_code", "changed_mind")));
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactlyInAnyOrder("ten_x:floor.loc_1", "ten_x:session.ses_1");
+    }
+
+    @Test
     void orderLifecycleEventsHitTheFloorChannel() {
         for (String type : new String[] {
             "order.voided",
