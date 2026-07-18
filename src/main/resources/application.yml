@@ -42,7 +42,9 @@ management:
 
 restopanda:
   security:
-    audience: ${OAUTH_AUDIENCE:realtime-gateway}
+    # Accepted `aud` values for JWT validation (commons-security SecurityProperties).
+    # Must match the audience platform-service stamps into access tokens.
+    audiences: ${OAUTH_AUDIENCES:restopanda}
   messaging:
     # Pure consumer: subscribe to the shared bus, never publish. The bus adapter
     # (`pg`) is switched on centrally in the local stack via env; disable the
