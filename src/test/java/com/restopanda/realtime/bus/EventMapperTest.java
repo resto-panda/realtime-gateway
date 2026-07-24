@@ -132,6 +132,7 @@ class EventMapperTest {
             "order.item_comped",
             "order.item_refired",
             "order.item_recalled",
+            "order.kitchen_status_changed",
             "order.force_resolved"
         }) {
             var pushes = mapper.map(event(type, "ten_x", "loc_1", Map.of("order_id", "ord_1", "line_item_id", "li_1")));
@@ -140,6 +141,22 @@ class EventMapperTest {
             assertThat(pushes.get(0).hint()).isTrue();
             assertThat(pushes.get(0).payload()).containsEntry("order_id", "ord_1");
         }
+    }
+
+    @Test
+    void kitchenStatusChangedCarriesTheNewStatusOnTheFloorHint() {
+        // The delivered→served roll-up: floor/order screens refetch, and the new
+        // status rides along so a client can update the pill straight off the hint.
+        var pushes = mapper.map(
+                event("order.kitchen_status_changed", "ten_x", "loc_1", Map.of("order_id", "ord_1", "kitchen_status", "served")));
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_1");
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("type", "order.kitchen_status_changed")
+                    .containsEntry("order_id", "ord_1")
+                    .containsEntry("kitchen_status", "served");
+        });
     }
 
     @Test

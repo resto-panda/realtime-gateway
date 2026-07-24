@@ -42,6 +42,14 @@ public final class EventTypes {
     /** A manager/admin force-resolved a stuck/orphaned order — floor + order screens refetch. */
     public static final String ORDER_FORCE_RESOLVED = "order.force_resolved";
 
+    /**
+     * The order's roll-up {@code kitchen_status} moved ({@code cooking → ready →
+     * served}) off a KDS ticket event — floor/order screens refetch so a runner's
+     * delivered→served shows live instead of after a manual refresh. data carries
+     * {@code order_id, kitchen_status}.
+     */
+    public static final String ORDER_KITCHEN_STATUS_CHANGED = "order.kitchen_status_changed";
+
     // --- order-service: money-off approval workflow (staff comp/discount/void
     //     over threshold → manager approval queue). data carries approval_id,
     //     order_id, kind, amount_minor, requested_by (+ status/resolved_by on

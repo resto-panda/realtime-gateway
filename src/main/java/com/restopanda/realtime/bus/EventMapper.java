@@ -108,10 +108,14 @@ public class EventMapper {
                     EventTypes.ORDER_ITEM_COMPED,
                     EventTypes.ORDER_ITEM_REFIRED,
                     EventTypes.ORDER_ITEM_RECALLED,
+                    EventTypes.ORDER_KITCHEN_STATUS_CHANGED,
                     EventTypes.ORDER_FORCE_RESOLVED -> {
                 String loc = location != null ? location : str(data, "location_id");
                 if (loc != null) {
-                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id")));
+                    // kitchen_status rides along on the roll-up event so a client can read
+                    // the new status straight off the hint; copy() drops it for the events
+                    // that don't carry it.
+                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id", "kitchen_status")));
                 }
             }
 
