@@ -119,6 +119,18 @@ public class EventMapper {
                 }
             }
 
+            // ---- Payment outcomes → the floor channel, ids only. Amounts and
+            //      failure reasons deliberately stay OFF the hint: the floor
+            //      channel is visible to every floor:read staffer at the
+            //      location, so clients refetch the order (entitlement-shaped)
+            //      for the actual state.
+            case EventTypes.PAYMENT_CAPTURED, EventTypes.PAYMENT_FAILED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "payment_id")));
+                }
+            }
+
             // ---- Money-off approval workflow → the location's manager approval
             //      queue (order:manage subscribers). Carries the request fields so
             //      the queue/badge can update immediately; still a hint — the

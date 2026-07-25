@@ -50,6 +50,16 @@ public final class EventTypes {
      */
     public static final String ORDER_KITCHEN_STATUS_CHANGED = "order.kitchen_status_changed";
 
+    // --- payment-service: settlement outcomes. The envelope carries location_id
+    //     (payment copies it from the inbound intent request); data carries
+    //     order_id + payment_id. Terminal-only since the reliability rework:
+    //     payment.failed fires once per intent, so a floor hint per event is
+    //     cheap. Staff order screens refetch to show paid / failed states live
+    //     (the PaySheet closes ~900ms after tender — outcome visibility lives on
+    //     OrderScreen, fed by exactly these hints). --------------------------------
+    public static final String PAYMENT_CAPTURED = "payment.captured";
+    public static final String PAYMENT_FAILED = "payment.failed";
+
     // --- order-service: money-off approval workflow (staff comp/discount/void
     //     over threshold → manager approval queue). data carries approval_id,
     //     order_id, kind, amount_minor, requested_by (+ status/resolved_by on

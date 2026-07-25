@@ -144,6 +144,35 @@ class EventMapperTest {
     }
 
     @Test
+    void paymentOutcomesHitTheFloorChannelWithIdsOnly() {
+        // Paid / failed states must show on staff order screens live (the
+        // PaySheet auto-closes before the outcome lands). Ids only — amounts and
+        // failure reasons never ride a hint every floor:read staffer can see.
+        for (String type : new String[] {"payment.captured", "payment.failed"}) {
+            var pushes = mapper.map(event(
+                    type,
+                    "ten_x",
+                    "loc_1",
+                    Map.of("order_id", "ord_1", "payment_id", "pay_1", "amount", 1234, "reason", "declined")));
+            assertThat(pushes).singleElement().satisfies(p -> {
+                assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_1");
+                assertThat(p.hint()).isTrue();
+                assertThat(p.payload())
+                        .containsEntry("order_id", "ord_1")
+                        .containsEntry("payment_id", "pay_1")
+                        .doesNotContainKeys("amount", "reason");
+            });
+        }
+    }
+
+    @Test
+    void paymentOutcomeWithoutALocationResolvesNoChannels() {
+        // No location on the envelope or payload → nowhere to route; never throw.
+        var pushes = mapper.map(event("payment.captured", "ten_x", null, Map.of("order_id", "ord_1")));
+        assertThat(pushes).isEmpty();
+    }
+
+    @Test
     void kitchenStatusChangedCarriesTheNewStatusOnTheFloorHint() {
         // The delivered→served roll-up: floor/order screens refetch, and the new
         // status rides along so a client can update the pill straight off the hint.
