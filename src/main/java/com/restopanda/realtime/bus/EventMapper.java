@@ -194,6 +194,7 @@ public class EventMapper {
                     EventTypes.SESSION_CHECK_REQUESTED,
                     EventTypes.SESSION_CLOSED,
                     EventTypes.SESSION_READY_TO_CLOSE,
+                    EventTypes.SESSION_REOPENED,
                     EventTypes.SESSION_RELEASED -> {
                 String sessionId = str(data, "session_id");
                 if (location != null) {

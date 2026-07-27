@@ -97,6 +97,12 @@ public final class EventTypes {
      * this hint the badge would sit stale until something else happened to the table.
      */
     public static final String SESSION_READY_TO_CLOSE = "session.ready_to_close";
+    /**
+     * A seating was reopened — a party ordered again after their table had turned.
+     * The table goes back to occupied, so the map must repaint or it keeps showing a
+     * free or dirty table with people sitting at it.
+     */
+    public static final String SESSION_REOPENED = "session.reopened";
 
     // --- payment-service: drawer/register state changed (session opened/closed,
     //     cash event, cash sale). data carries location_id, drawer_id, session_id?,
