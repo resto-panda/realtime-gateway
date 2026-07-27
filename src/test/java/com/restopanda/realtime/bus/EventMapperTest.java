@@ -125,6 +125,36 @@ class EventMapperTest {
     }
 
     @Test
+    void sessionReadyToCloseResolvesFloorAndSession() {
+        // A paid table has been fully served: the floor card flips from
+        // "Paid · N pending" to "ready to close". Without this hint the badge sits
+        // stale until something else happens to the table — the whole point of the
+        // prompt is that nobody is watching it.
+        var pushes = mapper.map(event(
+                "session.ready_to_close",
+                "ten_x",
+                "loc_1",
+                Map.of("session_id", "ses_1", "table_id", "tbl_1", "opened_by", "usr_1")));
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactlyInAnyOrder("ten_x:floor.loc_1", "ten_x:session.ses_1");
+    }
+
+    @Test
+    void fulfillmentAdvancedHitsTheFloorChannel() {
+        // Every plate landing ticks the paid-but-waiting badge down, so every one
+        // must refresh the map — not just the delivery that empties it.
+        var pushes = mapper.map(event(
+                "order.fulfillment_advanced",
+                "ten_x",
+                "loc_1",
+                Map.of("order_id", "ord_1", "line_item_id", "li_1", "to_state", "delivered")));
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactly("ten_x:floor.loc_1");
+    }
+
+    @Test
     void orderLifecycleEventsHitTheFloorChannel() {
         for (String type : new String[] {
             "order.voided",

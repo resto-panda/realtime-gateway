@@ -109,6 +109,7 @@ public class EventMapper {
                     EventTypes.ORDER_ITEM_REFIRED,
                     EventTypes.ORDER_ITEM_RECALLED,
                     EventTypes.ORDER_KITCHEN_STATUS_CHANGED,
+                    EventTypes.ORDER_FULFILLMENT_ADVANCED,
                     EventTypes.ORDER_FORCE_RESOLVED -> {
                 String loc = location != null ? location : str(data, "location_id");
                 if (loc != null) {
@@ -192,6 +193,7 @@ public class EventMapper {
             case EventTypes.SESSION_OPENED,
                     EventTypes.SESSION_CHECK_REQUESTED,
                     EventTypes.SESSION_CLOSED,
+                    EventTypes.SESSION_READY_TO_CLOSE,
                     EventTypes.SESSION_RELEASED -> {
                 String sessionId = str(data, "session_id");
                 if (location != null) {

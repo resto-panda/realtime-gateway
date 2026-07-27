@@ -50,6 +50,13 @@ public final class EventTypes {
      */
     public static final String ORDER_KITCHEN_STATUS_CHANGED = "order.kitchen_status_changed";
 
+    /**
+     * A plate advanced along the fulfillment axis. Carries the session's remaining
+     * plate count, which is exactly what the floor's paid-but-waiting badge counts
+     * down — so every delivery must refresh the map, not just the last one.
+     */
+    public static final String ORDER_FULFILLMENT_ADVANCED = "order.fulfillment_advanced";
+
     // --- payment-service: settlement outcomes. The envelope carries location_id
     //     (payment copies it from the inbound intent request); data carries
     //     order_id + payment_id. Terminal-only since the reliability rework:
@@ -84,6 +91,12 @@ public final class EventTypes {
     public static final String SESSION_CLOSED = "session.closed";
     /** Pre-order release (un-seat) — the floor must refresh just like a close. */
     public static final String SESSION_RELEASED = "session.released";
+    /**
+     * A paid table has been fully served and can be closed out. The floor card flips
+     * from "Paid · N pending" to "ready to close", so the map must refresh — without
+     * this hint the badge would sit stale until something else happened to the table.
+     */
+    public static final String SESSION_READY_TO_CLOSE = "session.ready_to_close";
 
     // --- payment-service: drawer/register state changed (session opened/closed,
     //     cash event, cash sale). data carries location_id, drawer_id, session_id?,
