@@ -386,6 +386,160 @@ class EventMapperTest {
     }
 
     @Test
+    void marketplaceOrderReceivedHitsTheLocationMarketplaceBoard() {
+        var pushes = mapper.map(event(
+                "marketplace.order_received",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "external_order_id", "DD-4821",
+                        "provider", "doordash",
+                        "connection_id", "mkc_1",
+                        "location_id", "loc_1",
+                        "status", "received")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:marketplace.loc_1");
+            assertThat(p.channel().family()).isEqualTo(ChannelFamily.MARKETPLACE);
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("type", "marketplace.order_received")
+                    .containsEntry("external_order_id", "DD-4821")
+                    .containsEntry("provider", "doordash")
+                    .doesNotContainKey("status");
+        });
+    }
+
+    @Test
+    void marketplaceInjectedHintOmitsTheMidTransactionStatus() {
+        // Auto-accept: receiveAndInject publishes order_injected with
+        // status="injected" and then, in the same transaction, commits the row as
+        // accepted without publishing anything else. Forwarding that status would
+        // leave the board on "awaiting accept" for an accepted order, with no
+        // corrective event — so the hint carries ids only and the client refetches.
+        var pushes = mapper.map(event(
+                "marketplace.order_injected",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "external_order_id", "DD-4821",
+                        "provider", "doordash",
+                        "connection_id", "mkc_1",
+                        "location_id", "loc_1",
+                        "order_id", "ord_1",
+                        "status", "injected")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:marketplace.loc_1");
+            assertThat(p.payload())
+                    .containsEntry("type", "marketplace.order_injected")
+                    .containsEntry("external_order_id", "DD-4821")
+                    .containsEntry("order_id", "ord_1")
+                    .doesNotContainKey("status");
+        });
+    }
+
+    @Test
+    void marketplaceAcceptUsesEnvelopeLocationWhenPayloadHasNone() {
+        // ExternalOrderService.statusData() omits location_id on accept/reject —
+        // the envelope is the only routing key those two carry.
+        var pushes = mapper.map(event(
+                "marketplace.order_accepted",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "external_order_id", "DD-4821",
+                        "provider", "doordash",
+                        "connection_id", "mkc_1",
+                        "order_id", "ord_1",
+                        "status", "accepted")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:marketplace.loc_1");
+            assertThat(p.payload()).containsEntry("order_id", "ord_1").doesNotContainKey("status");
+        });
+    }
+
+    @Test
+    void marketplaceCancelledCarriesTheReason() {
+        var pushes = mapper.map(event(
+                "marketplace.order_cancelled",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "external_order_id", "DD-4821",
+                        "provider", "doordash",
+                        "order_id", "ord_1",
+                        "status", "cancelled",
+                        "reason", "customer_cancelled")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:marketplace.loc_1");
+            assertThat(p.payload())
+                    .containsEntry("reason", "customer_cancelled")
+                    .doesNotContainKey("status");
+        });
+    }
+
+    @Test
+    void marketplaceOrderWithNoLocationAnywhereResolvesNoChannels() {
+        assertThat(mapper.map(event(
+                        "marketplace.order_rejected",
+                        "ten_x",
+                        null,
+                        Map.of("external_order_id", "DD-4821", "provider", "doordash", "status", "rejected"))))
+                .isEmpty();
+    }
+
+    @Test
+    void deliveryEtaUpdatedHitsTheMarketplaceBoardWithoutCourierName() {
+        // The driver's name (and phone) must never ride a hint every
+        // marketplace:read staffer at the location receives — only the ETA the
+        // board counts down from.
+        var pushes = mapper.map(event(
+                "order.delivery_eta_updated",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "provider", "doordash",
+                        "courier_name", "Jamie R.",
+                        "courier_eta", "2026-08-03T18:42:00Z")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:marketplace.loc_1");
+            assertThat(p.channel().family()).isEqualTo(ChannelFamily.MARKETPLACE);
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("order_id", "ord_1")
+                    .containsEntry("provider", "doordash")
+                    .containsEntry("courier_eta", "2026-08-03T18:42:00Z")
+                    .doesNotContainKeys("courier_name", "courier_phone");
+        });
+    }
+
+    @Test
+    void marketplaceTenantAndLocationAlwaysComeFromTheEnvelope() {
+        // The inbound provider webhook body is attacker-influenced and persists on
+        // the ledger row, so neither a payload-named tenant nor a payload-named
+        // location may address someone else's board.
+        var pushes = mapper.map(event(
+                "marketplace.order_injected",
+                "ten_real",
+                "loc_1",
+                Map.of(
+                        "external_order_id", "DD-4821",
+                        "tenant_id", "ten_attacker",
+                        "location_id", "loc_attacker",
+                        "status", "injected")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().tenantId()).isEqualTo("ten_real");
+            assertThat(p.channel().value()).isEqualTo("ten_real:marketplace.loc_1");
+        });
+    }
+
+    @Test
     void threadMessageCarriesBodyNotHint() {
         var pushes = mapper.map(event(
                 "message.sent",

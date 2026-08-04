@@ -77,6 +77,15 @@ class ChannelAuthorizerTest {
                 .isEqualTo("ten_A:approvals.loc_1");
     }
 
+    @Test
+    void staffMarketplaceReadGetsInScopeMarketplaceBoard() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "marketplace:read");
+        assertThat(authorizer.authorize(caller, List.of("ten_A:marketplace.loc_1")))
+                .singleElement()
+                .extracting(Channel::value)
+                .isEqualTo("ten_A:marketplace.loc_1");
+    }
+
     // ---- staff: the rejections -------------------------------------------------
 
     @Test
@@ -152,6 +161,28 @@ class ChannelAuthorizerTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    @Test
+    void marketplaceWithoutMarketplaceReadIsRejected() {
+        // floor:read/kds:read do NOT open the delivery board — marketplace:read does.
+        Caller caller = staff("ten_A", Set.of("loc_1"), "floor:read", "kds:read", "order:manage");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:marketplace.loc_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossLocationMarketplaceIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "marketplace:read");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_A:marketplace.loc_2")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void crossTenantMarketplaceIsRejected() {
+        Caller caller = staff("ten_A", Set.of("loc_1"), "marketplace:read");
+        assertThatThrownBy(() -> authorizer.authorize(caller, List.of("ten_B:marketplace.loc_1")))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
     // ---- staff: personal user channel is self-only ----------------------------
 
     @Test
@@ -215,7 +246,8 @@ class ChannelAuthorizerTest {
                 "ten_A:thread.thr_1",
                 "ten_A:user.usr_1",
                 "ten_A:register.loc_1",
-                "ten_A:approvals.loc_1")) {
+                "ten_A:approvals.loc_1",
+                "ten_A:marketplace.loc_1")) {
             assertThatThrownBy(() -> authorizer.authorize(g, List.of(c)))
                     .as("guest must not reach %s", c)
                     .isInstanceOf(ForbiddenException.class);

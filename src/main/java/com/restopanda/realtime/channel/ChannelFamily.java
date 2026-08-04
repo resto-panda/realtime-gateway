@@ -28,7 +28,12 @@ public enum ChannelFamily {
     /** A location's cash-register/drawer board: {@code register.{locationId}}. */
     REGISTER("register"),
     /** A location's manager approval queue: {@code approvals.{locationId}}. */
-    APPROVALS("approvals");
+    APPROVALS("approvals"),
+    /**
+     * A location's third-party delivery board: {@code marketplace.{locationId}} —
+     * the inbound external-order ledger plus courier/ETA updates.
+     */
+    MARKETPLACE("marketplace");
 
     private final String prefix;
 

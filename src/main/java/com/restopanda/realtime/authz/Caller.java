@@ -72,6 +72,12 @@ public sealed interface Caller permits Caller.Staff, Caller.Guest {
                 // entitlement + location scope.
                 case APPROVALS -> hasEntitlement.test("order:manage")
                         && locationIds.contains(channel.entityId());
+                // The third-party delivery board is keyed by location: marketplace
+                // read + location scope. Location membership is what stops a
+                // marketplace:read user at one store watching another store's
+                // inbound orders.
+                case MARKETPLACE -> hasEntitlement.test("marketplace:read")
+                        && locationIds.contains(channel.entityId());
             };
         }
     }

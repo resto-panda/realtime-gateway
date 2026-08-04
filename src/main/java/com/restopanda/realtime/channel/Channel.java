@@ -67,6 +67,11 @@ public record Channel(String tenantId, ChannelFamily family, String entityId) {
         return new Channel(tenantId, ChannelFamily.APPROVALS, locationId);
     }
 
+    /** A location's inbound third-party delivery board — {@code marketplace:read} staff only. */
+    public static Channel marketplace(String tenantId, String locationId) {
+        return new Channel(tenantId, ChannelFamily.MARKETPLACE, locationId);
+    }
+
     /**
      * Parses a wire channel string back into its parts, validating the shape.
      *

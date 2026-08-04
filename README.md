@@ -46,6 +46,9 @@ out of scope the whole mint is rejected.
 | `{t}:session.{id}`        | `floor:read`                                 | only its **own** `session.{id}`|
 | `{t}:user.{userId}`       | **self-only** (`userId` == token `sub`; no entitlement) | ✗                   |
 | `{t}:thread.{id}`         | `messaging:read`                             | ✗                              |
+| `{t}:register.{loc}`      | `payment:read` **or** `payment:drawer`, + `loc` ∈ token `location_ids` | ✗     |
+| `{t}:approvals.{loc}`     | `order:manage` + `loc` ∈ token `location_ids`| ✗                              |
+| `{t}:marketplace.{loc}`   | `marketplace:read` + `loc` ∈ token `location_ids` | ✗                         |
 
 Cross-tenant, cross-location, missing-entitlement, and guest-out-of-session
 subscriptions are all rejected (the RLS-equivalent for realtime). Guest tokens
@@ -67,6 +70,11 @@ change. Everything is a refetch **hint** except chat, which carries the body.
 | `table.status_changed`                  | `{t}:floor.{location_id}`                              | hint    |
 | `order.server_reassigned`               | `{t}:user.{new_server_id}`, `{t}:user.{old_server_id}` | hint (carries `table_label`) |
 | `session.opened/check_requested/closed` | `{t}:floor.{loc}`, `{t}:session.{session_id}`          | hint    |
+| `payment.captured` / `payment.failed`   | `{t}:floor.{loc}`                                      | hint (ids only) |
+| `order.approval_requested/resolved`     | `{t}:approvals.{loc}`                                  | hint (carries the request fields) |
+| `register.updated`                      | `{t}:register.{location_id}`                           | hint (carries drawer state) |
+| `marketplace.order_received/injected/accepted/rejected/cancelled` | `{t}:marketplace.{loc}`      | hint (ids only, no `status`) |
+| `order.delivery_eta_updated`            | `{t}:marketplace.{loc}`                                | hint (`courier_eta` only) |
 | `message.sent` / `thread.message`       | `{t}:thread.{thread_id}`                               | **body**|
 
 Routing keys come from the envelope (`tenant_id`, `location_id`) plus a few ids
@@ -76,6 +84,35 @@ changed (`type` + ids); the client refetches the authoritative snapshot.
 > Known gap: ticket events carry no `session_id`, so `ticket.item_ready` reaches
 > the station/runner boards but not a `session.{id}` channel. When KDS adds
 > `session_id` to ticket payloads, add the session mapping in `EventMapper`.
+
+### The marketplace board
+
+`marketplace.{loc}` carries the inbound third-party delivery ledger and its
+courier updates. Three things about it are deliberate:
+
+- **The hint carries no `status`.** Marketplace publishes these from inside one
+  transaction — `received` → `injected` → (auto-accept) `accepted` — so every
+  event but the last one names a status the committed row has already moved past.
+  On the auto-accept path `InboundOrderService.receiveAndInject` sets
+  `status = accepted` and publishes *nothing* after `marketplace.order_injected`,
+  so a board that rendered the hint's status would show "awaiting accept" for an
+  accepted order until the next interval poll. The event type names the
+  transition; the ledger status comes from the refetch the hint triggers — which
+  returns `accepted` and needs no extra event.
+- **`courier_name` and `courier_phone` never ride the hint** — the same rule as
+  `payment.captured`. The board fans out to every `marketplace:read` staffer at
+  the location, so a named driver would land in every open devtools console.
+  `courier_eta` alone drives the "arriving in Xm" countdown; the name comes back
+  on the refetch.
+- **`location_id` resolves envelope-first**, like every other location-keyed arm
+  in `EventMapper` (`register.updated` is the one that reads `data` first, and it
+  falls back to the envelope). It matters here because
+  `marketplace.order_accepted` / `..._rejected` carry no `location_id` in `data`
+  at all — the envelope is their only routing key.
+
+A client must gate this channel on the `marketplace:read` entitlement it already
+checks: ticket minting is all-or-nothing, so appending it for a user who lacks
+the entitlement breaks that user's *whole* stream, not just the board.
 
 ## How it consumes the bus
 

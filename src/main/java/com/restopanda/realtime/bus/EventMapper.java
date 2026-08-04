@@ -222,6 +222,44 @@ public class EventMapper {
                 }
             }
 
+            // ---- Inbound third-party delivery lifecycle → the location's
+            //      marketplace board. Accept/reject carry no location_id in data, so
+            //      for those two the envelope is the only routing key.
+            //      Ids only — `status` deliberately stays OFF the hint. Marketplace
+            //      emits these from inside one transaction (received → injected →
+            //      accepted on the auto-accept path), so every event but the last
+            //      carries a status the committed ledger row has already moved past;
+            //      a board that rendered it would show "awaiting accept" for an
+            //      already-accepted order. The event type names the transition, the
+            //      refetch names the state.
+            case EventTypes.MARKETPLACE_ORDER_RECEIVED,
+                    EventTypes.MARKETPLACE_ORDER_INJECTED,
+                    EventTypes.MARKETPLACE_ORDER_ACCEPTED,
+                    EventTypes.MARKETPLACE_ORDER_REJECTED,
+                    EventTypes.MARKETPLACE_ORDER_CANCELLED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(
+                            Channel.marketplace(tenant, loc),
+                            e,
+                            ids(data, "external_order_id", "provider", "connection_id", "order_id", "reason")));
+                }
+            }
+
+            // ---- Courier assigned / ETA moved → the same board, so the "driver
+            //      arriving in Xm" line ticks without a poll. courier_name and
+            //      courier_phone stay OFF the hint (the payment.captured rule): a
+            //      named driver would fan out to every marketplace:read staffer at
+            //      the location. courier_eta alone drives the countdown; the name
+            //      comes back on the refetch.
+            case EventTypes.ORDER_DELIVERY_ETA_UPDATED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(
+                            Channel.marketplace(tenant, loc), e, ids(data, "order_id", "provider", "courier_eta")));
+                }
+            }
+
             // ---- Chat: the only family that carries a body, so the client
             //      renders directly without a refetch.
             case EventTypes.MESSAGE_SENT, EventTypes.THREAD_MESSAGE -> {

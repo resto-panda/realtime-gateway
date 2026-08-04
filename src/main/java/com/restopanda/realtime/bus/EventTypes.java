@@ -109,6 +109,28 @@ public final class EventTypes {
     //     kind, drawer_status, expected_in_drawer -------------------------------
     public static final String REGISTER_UPDATED = "register.updated";
 
+    // --- marketplace-service: inbound third-party delivery order lifecycle. The
+    //     envelope carries tenant_id + location_id; data carries external_order_id,
+    //     provider, connection_id, order_id, status (+ reason on cancel). Note the
+    //     accept/reject payloads carry NO location_id — the envelope is the only
+    //     routing key those two have. `status` is point-in-time (received/injected
+    //     are published mid-transaction, and the row commits further along), so the
+    //     mapper does not forward it.
+    //     A re-inject re-publishes order_injected; there is no separate type. ------
+    public static final String MARKETPLACE_ORDER_RECEIVED = "marketplace.order_received";
+    public static final String MARKETPLACE_ORDER_INJECTED = "marketplace.order_injected";
+    public static final String MARKETPLACE_ORDER_ACCEPTED = "marketplace.order_accepted";
+    public static final String MARKETPLACE_ORDER_REJECTED = "marketplace.order_rejected";
+    public static final String MARKETPLACE_ORDER_CANCELLED = "marketplace.order_cancelled";
+
+    /**
+     * A third-party courier was assigned or its ETA moved — the "driver arriving"
+     * signal, relayed from a provider dispatch webhook through marketplace into
+     * order-service. data carries {@code order_id, provider, courier_name,
+     * courier_eta}; the board counts down off {@code courier_eta}.
+     */
+    public static final String ORDER_DELIVERY_ETA_UPDATED = "order.delivery_eta_updated";
+
     // --- messaging-service: chat. `thread.message` is the ready-made relay
     //     payload (carries `channel` + `body`); `message.sent` is the domain
     //     event (also carries `body`) --------------------------------------------
