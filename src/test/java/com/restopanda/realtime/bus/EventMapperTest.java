@@ -125,6 +125,35 @@ class EventMapperTest {
     }
 
     @Test
+    void aResolvedApprovalHintsBothTheManagerQueueAndTheFloor() {
+        // The server who raised the request is watching their order screen, which
+        // refetches on floor hints and nothing else. A REJECTED request changes
+        // nothing on the order but its approvals block, so without the floor hint
+        // their screen shows it pending forever while the manager sees it closed.
+        var pushes = mapper.map(event(
+                "order.approval_resolved",
+                "ten_x",
+                "loc_1",
+                Map.of("approval_id", "apr_1", "order_id", "ord_1", "line_item_id", "li_1", "status", "rejected")));
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactlyInAnyOrder("ten_x:approvals.loc_1", "ten_x:floor.loc_1");
+    }
+
+    @Test
+    void araisedApprovalStaysOnTheManagerQueueOnly() {
+        // Deliberately not hinted to the floor: every server refetching whenever
+        // anyone raises a request is noise, and nothing on their order changed yet.
+        var pushes = mapper.map(event(
+                "order.approval_requested",
+                "ten_x",
+                "loc_1",
+                Map.of("approval_id", "apr_2", "order_id", "ord_1", "kind", "item_remove")));
+        assertThat(pushes).singleElement().satisfies(p -> assertThat(p.channel().value())
+                .isEqualTo("ten_x:approvals.loc_1"));
+    }
+
+    @Test
     void sessionOpenedResolvesFloorAndSession() {
         var pushes = mapper.map(event(
                 "session.opened",
@@ -293,13 +322,22 @@ class EventMapperTest {
                         "resolved_by", "usr_manager",
                         "note", "ok")));
 
-        assertThat(pushes).singleElement().satisfies(p -> {
-            assertThat(p.channel().value()).isEqualTo("ten_x:approvals.loc_1");
-            assertThat(p.payload())
-                    .containsEntry("status", "approved")
-                    .containsEntry("resolved_by", "usr_manager")
-                    .containsEntry("note", "ok");
-        });
+        // Two pushes now: the manager queue keeps the full adjudication detail, and
+        // the floor gets an ids-only nudge so the server who raised it sees the
+        // outcome. The approvals payload below is the contract that matters here.
+        assertThat(pushes)
+                .filteredOn(p -> p.channel().value().equals("ten_x:approvals.loc_1"))
+                .singleElement()
+                .satisfies(p -> assertThat(p.payload())
+                        .containsEntry("status", "approved")
+                        .containsEntry("resolved_by", "usr_manager")
+                        .containsEntry("note", "ok"));
+        // The floor hint stays ids-only: that channel is visible to every floor:read
+        // staffer, so the manager's note must not ride along on it.
+        assertThat(pushes)
+                .filteredOn(p -> p.channel().value().equals("ten_x:floor.loc_1"))
+                .singleElement()
+                .satisfies(p -> assertThat(p.payload()).doesNotContainKey("note").doesNotContainKey("resolved_by"));
     }
 
     @Test

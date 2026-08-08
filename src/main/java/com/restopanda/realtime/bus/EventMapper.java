@@ -160,6 +160,18 @@ public class EventMapper {
                                     "resolved_by",
                                     "note")));
                 }
+                // A RESOLVED approval also hints the floor, so the server who raised
+                // the request learns the outcome. An approval that was granted already
+                // reaches them — it emits order.item_voided/comped, which the floor
+                // case above routes — but a REJECTED one changes nothing on the order
+                // except the approvals block itself, so without this the server's
+                // screen shows their request pending forever while the manager sees it
+                // closed. Requests are deliberately NOT hinted here: every server
+                // refetching whenever anyone raises one is noise, and the manager's
+                // approvals channel is what that is for.
+                if (EventTypes.ORDER_APPROVAL_RESOLVED.equals(e.type()) && loc != null) {
+                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "order_id", "line_item_id", "status")));
+                }
             }
 
             // ---- A table/check was (re)assigned to a server → alert the NEW server
