@@ -100,6 +100,31 @@ class EventMapperTest {
     }
 
     @Test
+    void fixtureUpsertedHintsTheFloor() {
+        var pushes = mapper.map(event(
+                "floor.fixture_upserted",
+                "ten_x",
+                "loc_1",
+                Map.of("fixture_id", "fix_1", "area_id", "sar_2", "label", "Bar", "shape", "rect")));
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_1");
+            assertThat(p.payload()).containsEntry("fixture_id", "fix_1").containsEntry("area_id", "sar_2");
+        });
+    }
+
+    @Test
+    void fixtureDeletedFallsBackToPayloadLocationAndOmitsAbsentArea() {
+        // A delete carries no area_id; ids() drops what is absent rather than
+        // emitting a null the client would have to special-case.
+        var pushes = mapper.map(
+                event("floor.fixture_deleted", "ten_x", null, Map.of("fixture_id", "fix_1", "location_id", "loc_9")));
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_9");
+            assertThat(p.payload()).containsEntry("fixture_id", "fix_1").doesNotContainKey("area_id");
+        });
+    }
+
+    @Test
     void sessionOpenedResolvesFloorAndSession() {
         var pushes = mapper.map(event(
                 "session.opened",

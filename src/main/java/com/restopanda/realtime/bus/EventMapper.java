@@ -188,6 +188,17 @@ public class EventMapper {
                 }
             }
 
+            // ---- Floor fixtures → the floor map for the location. Same routing as
+            //      a table status change: the layout is part of what the map draws,
+            //      so an edit has to invalidate it. Delete carries no label/shape,
+            //      and ids() drops what is absent rather than emitting a null.
+            case EventTypes.FLOOR_FIXTURE_UPSERTED, EventTypes.FLOOR_FIXTURE_DELETED -> {
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(Channel.floor(tenant, loc), e, ids(data, "fixture_id", "area_id")));
+                }
+            }
+
             // ---- Session lifecycle → the floor map for the location and the
             //      session's own channel.
             case EventTypes.SESSION_OPENED,

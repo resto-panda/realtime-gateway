@@ -85,6 +85,18 @@ public final class EventTypes {
     //     status) -----------------------------------------------------------------
     public static final String TABLE_STATUS_CHANGED = "table.status_changed";
 
+    // --- service: floor fixtures — the non-table furniture of a floor plan (bar,
+    //     wall, plant, host stand). data carries location_id, fixture_id, area_id?,
+    //     label, shape. Unlike tables these are owned outright by service, not
+    //     replicated from platform, because nothing outside service reads them.
+    //
+    //     They must reach the floor channel all the same: floor and table screens
+    //     refetch on a floor hint and on nothing else while the stream is up, so a
+    //     manager rearranging the room would otherwise leave every host screen
+    //     drawing the old layout until something unrelated moved a table. ---------
+    public static final String FLOOR_FIXTURE_UPSERTED = "floor.fixture_upserted";
+    public static final String FLOOR_FIXTURE_DELETED = "floor.fixture_deleted";
+
     // --- service: dining-session lifecycle (data carries session_id, table_id) --
     public static final String SESSION_OPENED = "session.opened";
     public static final String SESSION_CHECK_REQUESTED = "session.check_requested";
