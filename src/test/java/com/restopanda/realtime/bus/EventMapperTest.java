@@ -398,6 +398,184 @@ class EventMapperTest {
     }
 
     @Test
+    void transferredHintsTheFloorBothSeatingsAndTheOwningServer() {
+        // A party moved from table 4 to table 12. ONE floor hint repaints BOTH
+        // tables — the floor channel is location-scoped and the floor screen
+        // refreshes wholesale on any hint — and both seatings get it so a guest
+        // device bound to the old one stops rendering a check that left.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "from_table_label", "4",
+                        "to_table_label", "12",
+                        "from_session_id", "dsn_FROM",
+                        "to_session_id", "dsn_TO",
+                        "server_id", "usr_server")));
+
+        assertThat(pushes).hasSize(4);
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactly(
+                        "ten_x:floor.loc_1", "ten_x:session.dsn_FROM", "ten_x:session.dsn_TO", "ten_x:user.usr_server");
+        assertThat(pushes).extracting(p -> p.channel().value()).doesNotHaveDuplicates();
+        assertThat(pushes).allSatisfy(p -> {
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("type", "order.transferred")
+                    .containsEntry("order_id", "ord_1")
+                    .containsEntry("from_table_label", "4")
+                    .containsEntry("to_table_label", "12")
+                    .containsEntry("from_session_id", "dsn_FROM")
+                    .containsEntry("to_session_id", "dsn_TO")
+                    .containsEntry("server_id", "usr_server");
+        });
+    }
+
+    @Test
+    void transferredCarriesNoMoneyOnAnyChannel() {
+        // The floor channel is visible to every floor:read staffer at the
+        // location — the payment.captured rule. A transfer may run beside a live
+        // tender, so nothing about what the check owes rides the hint.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "to_table_label", "12",
+                        "to_session_id", "dsn_TO",
+                        "server_id", "usr_server",
+                        "amount", 4200L,
+                        "total", 9900L,
+                        "tip_total", 800L)));
+
+        assertThat(pushes).isNotEmpty();
+        assertThat(pushes).allSatisfy(p ->
+                assertThat(p.payload()).doesNotContainKeys("amount", "total", "tip_total"));
+    }
+
+    @Test
+    void aSeatlessBarTabBeingSeatedHasNoSourceSeatingToHint() {
+        // from_session_id is null for a bar tab: it never had a seating. Three
+        // pushes, not four, and no null-keyed session channel.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "to_table_label", "12",
+                        "to_session_id", "dsn_TO",
+                        "server_id", "usr_server")));
+
+        assertThat(pushes).hasSize(3);
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactly("ten_x:floor.loc_1", "ten_x:session.dsn_TO", "ten_x:user.usr_server");
+    }
+
+    @Test
+    void aMoveWithinOneSeatingHintsThatSessionOnlyOnce() {
+        // Two checks joining at one table share a seating, so from == to. The
+        // session must not be pushed twice — the same guard order.server_reassigned
+        // uses for old == new.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "from_table_label", "12",
+                        "to_table_label", "12",
+                        "from_session_id", "dsn_SAME",
+                        "to_session_id", "dsn_SAME",
+                        "server_id", "usr_server")));
+
+        assertThat(pushes).hasSize(3);
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactly("ten_x:floor.loc_1", "ten_x:session.dsn_SAME", "ten_x:user.usr_server");
+    }
+
+    @Test
+    void anUnclaimedCheckSkipsTheServerHint() {
+        // A bar tab opened on a shared terminal has no server_id; one fewer push
+        // and no user.null channel.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                "loc_1",
+                Map.of(
+                        "order_id", "ord_1",
+                        "from_session_id", "dsn_FROM",
+                        "to_session_id", "dsn_TO")));
+
+        assertThat(pushes).hasSize(3);
+        assertThat(pushes)
+                .extracting(p -> p.channel().family())
+                .containsExactly(ChannelFamily.FLOOR, ChannelFamily.SESSION, ChannelFamily.SESSION);
+    }
+
+    @Test
+    void transferredWithNoResolvableLocationStillReachesTheSeatings() {
+        // No location on the envelope or in the payload: the floor hint is
+        // unroutable, but the seatings and the server are addressed by id and
+        // must still get it. Never throw over a missing routing key.
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                null,
+                Map.of(
+                        "order_id", "ord_1",
+                        "from_session_id", "dsn_FROM",
+                        "to_session_id", "dsn_TO",
+                        "server_id", "usr_server")));
+
+        assertThat(pushes)
+                .extracting(p -> p.channel().value())
+                .containsExactly("ten_x:session.dsn_FROM", "ten_x:session.dsn_TO", "ten_x:user.usr_server");
+    }
+
+    @Test
+    void transferredFallsBackToThePayloadLocation() {
+        var pushes = mapper.map(event(
+                "order.transferred",
+                "ten_x",
+                null,
+                Map.of("order_id", "ord_1", "location_id", "loc_9", "to_table_label", "12")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_9");
+            assertThat(p.payload()).containsEntry("to_table_label", "12").doesNotContainKey("location_id");
+        });
+    }
+
+    @Test
+    void orderOpenedNowHintsTheFloor() {
+        // The regression that proves the second half landed. order.opened was
+        // absent from the allowlist since the gateway was written, so a new tab —
+        // bar, takeaway or dine-in — pushed nothing to any second device and the
+        // floor sat stale until an unrelated later event happened to hint it.
+        var pushes = mapper.map(event(
+                "order.opened",
+                "ten_x",
+                "loc_1",
+                Map.of("order_id", "ord_1", "table_label", "12", "session_id", "dsn_1", "channel", "bar_tab")));
+
+        assertThat(pushes).singleElement().satisfies(p -> {
+            assertThat(p.channel().value()).isEqualTo("ten_x:floor.loc_1");
+            assertThat(p.channel().family()).isEqualTo(ChannelFamily.FLOOR);
+            assertThat(p.hint()).isTrue();
+            assertThat(p.payload())
+                    .containsEntry("type", "order.opened")
+                    .containsEntry("order_id", "ord_1");
+        });
+    }
+
+    @Test
     void registerUpdatedHitsTheLocationRegisterChannel() {
         var pushes = mapper.map(event(
                 "register.updated",

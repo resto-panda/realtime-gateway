@@ -103,7 +103,14 @@ public class EventMapper {
             //      order channel exists, so they land on the location's floor
             //      channel as refetch hints — staff order screens subscribe to
             //      floor (they already hold floor:read) and re-pull the order.
-            case EventTypes.ORDER_VOIDED,
+            //
+            //      ORDER_OPENED belongs here and was simply missing: a check being
+            //      opened is the first thing a second device needs to learn about,
+            //      and clients do not poll while the stream is up, so a new tab —
+            //      bar, takeaway or dine-in — stayed invisible on every other screen
+            //      until an unrelated later event happened to hint the floor.
+            case EventTypes.ORDER_OPENED,
+                    EventTypes.ORDER_VOIDED,
                     EventTypes.ORDER_ITEM_VOIDED,
                     EventTypes.ORDER_ITEM_COMPED,
                     EventTypes.ORDER_ITEM_REFIRED,
@@ -188,6 +195,43 @@ public class EventMapper {
                 String oldServer = str(data, "old_server_id");
                 if (oldServer != null && !oldServer.equals(newServer)) {
                     pushes.add(hint(Channel.user(tenant, oldServer), e, fields));
+                }
+            }
+
+            // ---- A whole check MOVED — a bar tab was seated, a party changed
+            //      tables, a seated check went back to the bar. Unlike the
+            //      reassign above (which moves a PERSON and deliberately reaches
+            //      only user channels), this one LEADS with the floor: the floor
+            //      channel is LOCATION-scoped and the floor screen calls a full
+            //      refresh() on any hint, so ONE hint repaints BOTH the source and
+            //      the destination table. There is no per-table channel and none
+            //      is needed.
+            //
+            //      Both session channels get it too, so a guest device bound to the
+            //      OLD seating stops rendering a check that has left it; and the
+            //      owning server learns their check moved. Ids and labels only —
+            //      the payment.captured rule: the floor channel is visible to every
+            //      floor:read staffer at the location, so no amount or total rides
+            //      along and the client refetches the order for money.
+            case EventTypes.ORDER_TRANSFERRED -> {
+                Map<String, Object> fields = ids(
+                        data, "order_id", "from_table_label", "to_table_label",
+                        "from_session_id", "to_session_id", "server_id");
+                String loc = location != null ? location : str(data, "location_id");
+                if (loc != null) {
+                    pushes.add(hint(Channel.floor(tenant, loc), e, fields));
+                }
+                String from = str(data, "from_session_id");
+                if (from != null) {
+                    pushes.add(hint(Channel.session(tenant, from), e, fields));
+                }
+                String to = str(data, "to_session_id");
+                if (to != null && !to.equals(from)) {
+                    pushes.add(hint(Channel.session(tenant, to), e, fields));
+                }
+                String server = str(data, "server_id");
+                if (server != null) {
+                    pushes.add(hint(Channel.user(tenant, server), e, fields));
                 }
             }
 

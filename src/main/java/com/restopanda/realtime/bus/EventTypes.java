@@ -28,6 +28,15 @@ public final class EventTypes {
     // --- order-service: a course was fired to the kitchen -----------------------
     public static final String ORDER_COURSE_FIRED = "order.course_fired";
 
+    /**
+     * A check was OPENED. Absent from this list since the gateway was written, which
+     * is why a new tab — bar, takeaway or dine-in — pushes nothing to any open floor
+     * screen until an unrelated later event happens to hint it. Clients do not poll
+     * while the stream is up, so it looks broken precisely when the network is fine.
+     * data carries {@code order_id, table_label, session_id, channel}.
+     */
+    public static final String ORDER_OPENED = "order.opened";
+
     /** Order lifecycle changes staff order screens must reflect live (hints only). */
     public static final String ORDER_VOIDED = "order.voided";
 
@@ -80,6 +89,15 @@ public final class EventTypes {
      * {@code order_id, table_label, session_id, new_server_id, old_server_id}.
      */
     public static final String ORDER_SERVER_REASSIGNED = "order.server_reassigned";
+
+    /**
+     * A live check moved to another place. Routed to the location's floor channel —
+     * which is LOCATION-scoped, so ONE hint repaints both the source and the
+     * destination table — plus both session channels and the owning server.
+     * data carries {@code order_id, from_table_label, to_table_label,
+     * from_session_id, to_session_id, server_id}.
+     */
+    public static final String ORDER_TRANSFERRED = "order.transferred";
 
     // --- platform: table status transitions (data carries location_id, table_id,
     //     status) -----------------------------------------------------------------
