@@ -13,6 +13,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -30,8 +31,9 @@ class GatewayGuestTokenValidatorTest {
 
     @BeforeEach
     void setUp() {
+        // Blank key + no OAuth issuer (dev-like) → codec falls back to the dev key.
         GuestTokenCodec codec =
-                new GuestTokenCodec(new RealtimeProperties(null, null, null, null)); // blank key → dev key
+                new GuestTokenCodec(new RealtimeProperties(null, null, null, null), new MockEnvironment());
         validator = new GatewayGuestTokenValidator(codec, new SelfContainedGuestSessionResolver(codec, mapper));
     }
 
@@ -88,5 +90,27 @@ class GatewayGuestTokenValidatorTest {
         assertThat(validator.validate(null)).isEmpty();
         assertThat(validator.validate("")).isEmpty();
         assertThat(validator.validate("not-a-token")).isEmpty();
+    }
+
+    /**
+     * Fail-closed: with no guest signing key configured but a central OAuth issuer set
+     * (a real deployment), the codec must NOT fall back to the committed dev key. A
+     * token that a dev-key codec would happily accept is rejected here.
+     */
+    @Test
+    void blankKeyInRealDeploymentFailsClosed() {
+        MockEnvironment realDeployment = new MockEnvironment()
+                .withProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri", "https://issuer.example");
+        GuestTokenCodec codec =
+                new GuestTokenCodec(new RealtimeProperties(null, null, null, null), realDeployment); // blank key
+        GatewayGuestTokenValidator failClosed =
+                new GatewayGuestTokenValidator(codec, new SelfContainedGuestSessionResolver(codec, mapper));
+
+        long exp = Instant.now().plusSeconds(3600).getEpochSecond();
+        String devKeyToken = mint("ses_A", "ten_A", "loc_1", exp); // signed with the dev key
+
+        // The dev-like validator (setUp) would accept it; the real deployment must not.
+        assertThat(validator.validate(devKeyToken)).isPresent();
+        assertThat(failClosed.validate(devKeyToken)).isEmpty();
     }
 }
