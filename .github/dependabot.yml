@@ -1,0 +1,22 @@
+# Per-repo dependency + action vuln scanning. FREE on private repos.
+# Copy to EACH repo at: .github/dependabot.yml  (filename is exactly dependabot.yml)
+version: 2
+updates:
+  # Maven dependencies — security + version updates
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Batch non-security bumps into one PR to cut noise; security PRs still come individually.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    target-branch: dev
+
+  # Keep the GitHub Actions themselves patched (pinned action versions)
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    target-branch: dev
