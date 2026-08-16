@@ -17,6 +17,7 @@ jobs:
     with:
       service: realtime-gateway      # <-- change per repo
       block-on-vuln: false        # dev: Trivy warns but doesn't block (base-image CVEs). Re-enable after patching.
+      run-tests: false            # build.yml is the test gate; the deploy only needs the jar (don't re-run tests)
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
