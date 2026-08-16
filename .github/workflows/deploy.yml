@@ -1,0 +1,18 @@
+# Per-service DEPLOY (the genuinely-new layer — nothing deployed before).
+# Copy to each service repo at: .github/workflows/deploy.yml  (edit `service:`)
+# Runs on push to development (after build.yml passed): image -> Trivy -> ECR -> SSM.
+name: deploy
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+  deploy:
+    uses: resto-panda/devops/.github/workflows/deploy-service.yml@development
+    with:
+      service: realtime-gateway
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+      EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
