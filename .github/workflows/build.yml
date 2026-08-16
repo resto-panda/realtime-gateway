@@ -1,0 +1,19 @@
+# Per-service CI. REPLACES the existing standalone build.yml at .github/workflows/build.yml.
+# Same intent (mvn clean verify) but via the shared reusable, on BOTH main + development,
+# with the registry auth the old one lacked.
+name: build
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  build:
+    uses: resto-panda/devops/.github/workflows/build.yml@development
+    # with:
+    #   sonar-organization: resto-panda   # uncomment to enable Sonar
+    secrets:
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
