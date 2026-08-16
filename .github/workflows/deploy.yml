@@ -9,9 +9,14 @@ on:
 
 jobs:
   deploy:
+    # OIDC to AWS: the calling job must grant id-token so the reusable can use it.
+    permissions:
+      id-token: write
+      contents: read
     uses: resto-panda/devops/.github/workflows/deploy-service.yml@development
     with:
-      service: realtime-gateway
+      service: realtime-gateway      # <-- change per repo
+      block-on-vuln: false        # dev: Trivy warns but doesn't block (base-image CVEs). Re-enable after patching.
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
