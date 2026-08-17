@@ -29,6 +29,7 @@
     <include file="db/changelog/commons-processed-events.xml"/>
     <include file="db/changelog/commons-authz.xml"/>
 
+    <include file="db/changelog/commons-idempotency.xml"/>
     <!-- realtime-gateway owns no schema changesets of its own. -->
     <includeAll path="db/changelog/realtime/" errorIfMissingOrEmpty="false"/>
 
